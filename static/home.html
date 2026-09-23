@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>WeatherSafe</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <style>
   :root {
     --sky-1:#dce9fb; --sky-2:#eef3fb; --sky-3:#fdfdfb;
@@ -15,6 +16,10 @@
     --bot-face:#1e2836;
     --umb:#f2a03d; --umb-2:#d9862a; --umb-pole:#8d949f;
     --drop:#83b4ea;
+    --sun:#f6c453; --sun-glow:#fde9b6;
+    --cone:#d9a05b; --scoop-1:#f49fb6; --scoop-2:#fbeedb; --scoop-3:#b5784a;
+    --snow:#bcd7f2; --scarf:#e0645f; --scarf-2:#c24f4a;
+    --blush:#9dc4ea;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -22,11 +27,14 @@
       --ink:#eef1f6; --ink-2:#a4acbb; --ink-3:#6f7889;
       --surface:#161a22; --line:#272d39;
       --accent:#eef1f6; --accent-ink:#121620;
-
       --bot:#e9edf4; --bot-2:#c3ccdb; --bot-line:#9aa5b8;
       --bot-face:#1e2836;
       --umb:#eb9a3a; --umb-2:#c47a26; --umb-pole:#6b7280;
       --drop:#6d9fd8;
+      --sun:#f0c25b; --sun-glow:#3b3320;
+      --cone:#c08f4e; --scoop-1:#e08da6; --scoop-2:#e6dac6; --scoop-3:#9d6640;
+      --snow:#8fb4d8; --scarf:#d4544f; --scarf-2:#a63f3b;
+      --blush:#6d9fd8;
     }
   }
   :root[data-theme="dark"] {
@@ -38,6 +46,10 @@
     --bot-face:#1e2836;
     --umb:#eb9a3a; --umb-2:#c47a26; --umb-pole:#6b7280;
     --drop:#6d9fd8;
+    --sun:#f0c25b; --sun-glow:#3b3320;
+    --cone:#c08f4e; --scoop-1:#e08da6; --scoop-2:#e6dac6; --scoop-3:#9d6640;
+    --snow:#8fb4d8; --scarf:#d4544f; --scarf-2:#a63f3b;
+    --blush:#6d9fd8;
   }
 
   * { box-sizing:border-box; }
@@ -63,13 +75,11 @@
   .theme:hover { color:var(--ink); }
   .theme svg { width:16px; height:16px; }
 
-  /* ---------- layout ---------- */
   main {
     width:100%; max-width:1080px;
     padding:40px 32px;
     display:flex; align-items:center; gap:56px;
   }
-
   .copy { flex:1 1 0; min-width:0; }
 
   .wordmark {
@@ -93,10 +103,7 @@
   }
   h1 em { font-style:normal; color:var(--ink-2); }
 
-  .lede {
-    margin:0 0 34px;
-    font-size:18px; color:var(--ink-2);
-  }
+  .lede { margin:0 0 34px; font-size:18px; color:var(--ink-2); }
 
   .cta {
     display:inline-flex; align-items:center; gap:9px;
@@ -112,12 +119,35 @@
   .cta:active { transform:translateY(0); }
   .cta svg { width:18px; height:18px; }
 
-  /* ---------- art ---------- */
+  /* ---------------- art ---------------- */
   .art { flex:0 0 430px; max-width:46%; }
   .art svg { width:100%; height:auto; display:block; overflow:visible; }
 
+  /* three scenes on one 6s loop: rain 0-2s, sun 2-4s, cold 4-6s */
+  .scene { opacity:0; animation: cycle 6s infinite; }
+  .scene-rain { animation-delay: 0s; }
+  .scene-sun  { animation-delay: 2s; }
+  .scene-cold { animation-delay: 4s; }
+  @keyframes cycle {
+    0%   { opacity:0 }
+    6%   { opacity:1 }
+    28%  { opacity:1 }
+    34%  { opacity:0 }
+    100% { opacity:0 }
+  }
+
   .bot-float { animation: float 5.5s ease-in-out infinite; transform-origin:center; }
   @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+
+  /* the sneeze lands inside the cold window */
+  .bot-shake { animation: sneeze 6s infinite; transform-origin:268px 340px; }
+  @keyframes sneeze {
+    0%,66%,78%,100% { transform:translate(0,0) rotate(0deg) }
+    68%  { transform:translate(-4px,-3px) rotate(-2.2deg) }
+    71%  { transform:translate(5px,2px)   rotate(2.8deg) }
+    74%  { transform:translate(-3px,0)    rotate(-1.4deg) }
+    76%  { transform:translate(2px,0)     rotate(.8deg) }
+  }
 
   .umb-sway { animation: sway 6.5s ease-in-out infinite; transform-origin:150px 170px; }
   @keyframes sway { 0%,100%{transform:rotate(-1.4deg)} 50%{transform:rotate(1.4deg)} }
@@ -125,11 +155,11 @@
   .eye { animation: blink 5s infinite; transform-origin:center; }
   @keyframes blink { 0%,92%,100%{transform:scaleY(1)} 95%{transform:scaleY(.12)} }
 
-  .rain { animation: fall 1.9s linear infinite; opacity:0; }
-  .rain:nth-of-type(2) { animation-delay:.4s }
-  .rain:nth-of-type(3) { animation-delay:.9s }
-  .rain:nth-of-type(4) { animation-delay:1.3s }
-  .rain:nth-of-type(5) { animation-delay:.65s }
+  .rain { animation: fall 1.2s linear infinite; opacity:0; }
+  .rain:nth-of-type(2) { animation-delay:.25s }
+  .rain:nth-of-type(3) { animation-delay:.55s }
+  .rain:nth-of-type(4) { animation-delay:.8s }
+  .rain:nth-of-type(5) { animation-delay:.4s }
   @keyframes fall {
     0%   { transform:translateY(-10px); opacity:0 }
     25%  { opacity:.8 }
@@ -137,8 +167,32 @@
     100% { transform:translateY(46px); opacity:0 }
   }
 
+  .sun-glow { animation: pulse 2.4s ease-in-out infinite; transform-origin:96px 118px; }
+  @keyframes pulse { 0%,100%{opacity:.5; transform:scale(1)} 50%{opacity:.85; transform:scale(1.08)} }
+
+  .snow { animation: drift 2.6s linear infinite; opacity:0; }
+  .snow:nth-of-type(2) { animation-delay:.5s }
+  .snow:nth-of-type(3) { animation-delay:1.1s }
+  .snow:nth-of-type(4) { animation-delay:1.6s }
+  .snow:nth-of-type(5) { animation-delay:.3s }
+  .snow:nth-of-type(6) { animation-delay:.9s }
+  @keyframes drift {
+    0%   { transform:translate(0,-14px) rotate(0deg);   opacity:0 }
+    20%  { opacity:.9 }
+    80%  { opacity:.6 }
+    100% { transform:translate(10px,70px) rotate(180deg); opacity:0 }
+  }
+
+  .puff { animation: puffout 6s infinite; transform-origin:340px 244px; opacity:0; }
+  @keyframes puffout {
+    0%,67%,100% { opacity:0; transform:scale(.4) translateX(0) }
+    70%         { opacity:.9; transform:scale(1) translateX(4px) }
+    79%         { opacity:0;  transform:scale(1.5) translateX(20px) }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .bot-float,.umb-sway,.eye,.rain { animation:none }
+    .scene,.bot-float,.bot-shake,.umb-sway,.eye,.rain,.snow,.sun-glow,.puff { animation:none }
+    .scene-rain { opacity:1 } .scene-sun,.scene-cold { opacity:0 }
     .rain { opacity:.55 }
   }
 
@@ -193,34 +247,81 @@
   <div class="art" aria-hidden="true">
     <svg viewBox="0 0 420 460">
 
-      <g stroke="var(--drop)" stroke-width="4" stroke-linecap="round">
-        <line class="rain" x1="26"  y1="215" x2="21"  y2="232"/>
-        <line class="rain" x1="52"  y1="250" x2="47"  y2="267"/>
-        <line class="rain" x1="372" y1="212" x2="367" y2="229"/>
-        <line class="rain" x1="398" y1="252" x2="393" y2="269"/>
-        <line class="rain" x1="352" y1="290" x2="347" y2="307"/>
+      <!-- ============ SCENE 1 : RAIN ============ -->
+      <g class="scene scene-rain">
+        <g stroke="var(--drop)" stroke-width="4" stroke-linecap="round">
+          <line class="rain" x1="26"  y1="215" x2="21"  y2="232"/>
+          <line class="rain" x1="52"  y1="250" x2="47"  y2="267"/>
+          <line class="rain" x1="372" y1="212" x2="367" y2="229"/>
+          <line class="rain" x1="398" y1="252" x2="393" y2="269"/>
+          <line class="rain" x1="352" y1="290" x2="347" y2="307"/>
+        </g>
+        <g class="umb-sway">
+          <path d="M150 120 L150 300 q0 20 -20 20 q-18 0 -18 -16"
+                fill="none" stroke="var(--umb-pole)" stroke-width="9" stroke-linecap="round"/>
+          <path d="M18 168 C18 84 78 34 150 34 C222 34 282 84 282 168
+                   q-26.4 26 -52.8 0 q-26.4 26 -52.8 0 q-26.4 26 -52.8 0
+                   q-26.4 26 -52.8 0 q-26.4 26 -52.8 0 Z" fill="var(--umb)"/>
+          <path d="M150 34 C112 34 92 96 92 168 q26.4 26 52.8 0 q2.6 2.6 5.2 4.2 Z"
+                fill="var(--umb-2)" opacity=".28"/>
+          <path d="M150 34 C188 34 208 96 208 168 q-26.4 26 -52.8 0 q-2.6 2.6 -5.2 4.2 Z"
+                fill="var(--umb-2)" opacity=".14"/>
+          <path d="M150 34 L150 16" stroke="var(--umb-pole)" stroke-width="7" stroke-linecap="round"/>
+          <circle cx="150" cy="12" r="7" fill="var(--umb-2)"/>
+        </g>
       </g>
 
-      <g class="umb-sway">
-        <path d="M150 120 L150 300 q0 20 -20 20 q-18 0 -18 -16"
-              fill="none" stroke="var(--umb-pole)" stroke-width="9"
-              stroke-linecap="round"/>
-        <path d="M18 168 C18 84 78 34 150 34 C222 34 282 84 282 168
-                 q-26.4 26 -52.8 0 q-26.4 26 -52.8 0 q-26.4 26 -52.8 0
-                 q-26.4 26 -52.8 0 q-26.4 26 -52.8 0 Z"
-              fill="var(--umb)"/>
-        <path d="M150 34 C112 34 92 96 92 168 q26.4 26 52.8 0
-                 q2.6 2.6 5.2 4.2 Z" fill="var(--umb-2)" opacity=".28"/>
-        <path d="M150 34 C188 34 208 96 208 168 q-26.4 26 -52.8 0
-                 q-2.6 2.6 -5.2 4.2 Z" fill="var(--umb-2)" opacity=".14"/>
-        <path d="M150 34 L150 16" stroke="var(--umb-pole)" stroke-width="7"
-              stroke-linecap="round"/>
-        <circle cx="150" cy="12" r="7" fill="var(--umb-2)"/>
+      <!-- ============ SCENE 2 : SUN ============ -->
+      <g class="scene scene-sun">
+        <circle class="sun-glow" cx="96" cy="118" r="62" fill="var(--sun-glow)"/>
+        <circle cx="96" cy="118" r="40" fill="var(--sun)"/>
+        <g stroke="var(--sun)" stroke-width="7" stroke-linecap="round">
+          <line x1="96"  y1="52"  x2="96"  y2="36"/>
+          <line x1="96"  y1="200" x2="96"  y2="184"/>
+          <line x1="30"  y1="118" x2="14"  y2="118"/>
+          <line x1="162" y1="118" x2="178" y2="118"/>
+          <line x1="49"  y1="71"  x2="38"  y2="60"/>
+          <line x1="143" y1="165" x2="154" y2="176"/>
+          <line x1="143" y1="71"  x2="154" y2="60"/>
+          <line x1="49"  y1="165" x2="38"  y2="176"/>
+        </g>
       </g>
 
+      <!-- ============ SCENE 3 : COLD ============ -->
+      <g class="scene scene-cold">
+        <g fill="none" stroke="var(--snow)" stroke-width="3.5" stroke-linecap="round">
+          <g class="snow" transform="translate(58,150)">
+            <line x1="-8" y1="0" x2="8" y2="0"/><line x1="0" y1="-8" x2="0" y2="8"/>
+            <line x1="-6" y1="-6" x2="6" y2="6"/><line x1="-6" y1="6" x2="6" y2="-6"/>
+          </g>
+          <g class="snow" transform="translate(130,110)">
+            <line x1="-7" y1="0" x2="7" y2="0"/><line x1="0" y1="-7" x2="0" y2="7"/>
+            <line x1="-5" y1="-5" x2="5" y2="5"/><line x1="-5" y1="5" x2="5" y2="-5"/>
+          </g>
+          <g class="snow" transform="translate(212,86)">
+            <line x1="-8" y1="0" x2="8" y2="0"/><line x1="0" y1="-8" x2="0" y2="8"/>
+            <line x1="-6" y1="-6" x2="6" y2="6"/><line x1="-6" y1="6" x2="6" y2="-6"/>
+          </g>
+          <g class="snow" transform="translate(300,120)">
+            <line x1="-7" y1="0" x2="7" y2="0"/><line x1="0" y1="-7" x2="0" y2="7"/>
+            <line x1="-5" y1="-5" x2="5" y2="5"/><line x1="-5" y1="5" x2="5" y2="-5"/>
+          </g>
+          <g class="snow" transform="translate(372,170)">
+            <line x1="-8" y1="0" x2="8" y2="0"/><line x1="0" y1="-8" x2="0" y2="8"/>
+            <line x1="-6" y1="-6" x2="6" y2="6"/><line x1="-6" y1="6" x2="6" y2="-6"/>
+          </g>
+          <g class="snow" transform="translate(34,250)">
+            <line x1="-6" y1="0" x2="6" y2="0"/><line x1="0" y1="-6" x2="0" y2="6"/>
+            <line x1="-4" y1="-4" x2="4" y2="4"/><line x1="-4" y1="4" x2="4" y2="-4"/>
+          </g>
+        </g>
+      </g>
+
+      <!-- ============ THE ROBOT (shared) ============ -->
+      <g class="bot-shake">
       <g class="bot-float">
-        <path d="M268 196 L268 172" stroke="var(--bot-line)" stroke-width="7"
-              stroke-linecap="round"/>
+
+        <path d="M268 196 L268 172" stroke="var(--bot-line)" stroke-width="7" stroke-linecap="round"/>
         <circle cx="268" cy="166" r="8" fill="var(--umb)"/>
 
         <rect x="212" y="196" width="112" height="84" rx="26"
@@ -258,6 +359,43 @@
                  stroke="var(--bot-line)" stroke-width="3"/>
         <ellipse cx="296" cy="431" rx="19" ry="9" fill="var(--bot)"
                  stroke="var(--bot-line)" stroke-width="3"/>
+
+        <!-- SUN props: sunglasses + ice cream -->
+        <g class="scene scene-sun">
+          <rect x="234" y="228" width="32" height="20" rx="8" fill="#161b24"/>
+          <rect x="270" y="228" width="32" height="20" rx="8" fill="#161b24"/>
+          <path d="M266 235 L270 235" stroke="#161b24" stroke-width="5" stroke-linecap="round"/>
+          <path d="M226 233 L234 231" stroke="#161b24" stroke-width="5" stroke-linecap="round"/>
+          <path d="M310 233 L302 231" stroke="#161b24" stroke-width="5" stroke-linecap="round"/>
+
+          <path d="M133 300 L157 300 L145 340 Z" fill="var(--cone)"/>
+          <circle cx="138" cy="292" r="13" fill="var(--scoop-1)"/>
+          <circle cx="153" cy="290" r="12" fill="var(--scoop-2)"/>
+          <circle cx="145" cy="277" r="12" fill="var(--scoop-3)"/>
+        </g>
+
+        <!-- COLD props: scarf, shut eyes, blush, sneeze puff -->
+        <g class="scene scene-cold">
+          <path d="M228 284 q40 16 80 0 l0 15 q-40 16 -80 0 Z" fill="var(--scarf)"/>
+          <path d="M296 298 q12 4 14 18 l-4 22 q-10 4 -14 -2 l2 -20 Z" fill="var(--scarf-2)"/>
+
+          <rect x="226" y="212" width="84" height="52" rx="19" fill="var(--bot-face)"/>
+          <g fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round">
+            <path d="M241 240 q9 -9 18 0"/>
+            <path d="M277 240 q9 -9 18 0"/>
+          </g>
+
+          <ellipse cx="220" cy="258" rx="10" ry="6" fill="var(--blush)" opacity=".5"/>
+          <ellipse cx="316" cy="258" rx="10" ry="6" fill="var(--blush)" opacity=".5"/>
+
+          <g class="puff" fill="var(--snow)" opacity=".85">
+            <circle cx="336" cy="244" r="7"/>
+            <circle cx="350" cy="238" r="5"/>
+            <circle cx="349" cy="252" r="4"/>
+          </g>
+        </g>
+
+      </g>
       </g>
 
       <ellipse cx="268" cy="448" rx="78" ry="9" fill="var(--ink)" opacity=".07"/>

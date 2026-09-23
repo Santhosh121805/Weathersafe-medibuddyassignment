@@ -1,21 +1,4 @@
-"""
-Open-Meteo client.
 
-Two responsibilities, deliberately separated:
-
-  1. Talk to the network and fail LOUDLY and TYPED. Every failure raises a
-     WeatherError carrying a `kind`, so the graph can branch to the honest
-     failure node instead of handing half-data to the composer.
-
-  2. Flatten the response into a `facts` dict. That dict is the ONLY source
-     of numbers for the rest of the program. Policy checks it, the composer
-     is shown it, and the verifier checks the final answer against it.
-
-Note on the API: you must list `current=` / `hourly=` fields explicitly or you
-get metadata and no values. uv_index, precipitation_probability and visibility
-are not available under `current=`, so they are read from `hourly=` at the
-index matching the current hour.
-"""
 
 from __future__ import annotations
 
@@ -47,7 +30,7 @@ HOURLY_FIELDS = [
     "visibility",
 ]
 
-# WMO weather codes for thunderstorm.
+
 THUNDERSTORM_CODES = {95, 96, 99}
 
 TIMEOUT = httpx.Timeout(10.0, connect=5.0)
@@ -58,8 +41,7 @@ class WeatherError(RuntimeError):
 
     def __init__(self, kind: str, message: str):
         super().__init__(message)
-        self.kind = kind  # location_not_found | location_lookup_failed |
-                          # forecast_failed | bad_response
+        self.kind = kind  
         self.message = message
 
 
@@ -189,7 +171,7 @@ def build_facts(data: dict[str, Any], loc: Location) -> dict[str, Any]:
     code = current.get("weather_code")
 
     facts: dict[str, Any] = {
-        # straight from current=
+      
         "temperature_2m": current.get("temperature_2m"),
         "apparent_temperature": current.get("apparent_temperature"),
         "relative_humidity_2m": current.get("relative_humidity_2m"),
@@ -198,10 +180,10 @@ def build_facts(data: dict[str, Any], loc: Location) -> dict[str, Any]:
         "precipitation": current.get("precipitation"),
         "is_day": current.get("is_day"),
         "weather_code": code,
-        # from hourly= at the current hour
+        
         "precipitation_probability": at_hour("precipitation_probability"),
         "uv_index": at_hour("uv_index"),
-        # derived
+        
         "is_thunderstorm": code in THUNDERSTORM_CODES if code is not None else False,
         "visibility_poor": visibility is not None and visibility < 2000,
         "hour_local": int(current["time"][11:13]),

@@ -1,31 +1,4 @@
-"""
-The LangGraph agent.
 
-Graph shape:
-
-    START
-      v
-    parse_intent            classify activity + location (LLM, closed enum)
-      v
-    resolve_location  --(no location / lookup failed)--> honest_failure
-      v
-    fetch_weather     --(API failed)------------------> honest_failure
-      v
-    match_policy            deterministic rules, then fuzzy judge if needed
-      |
-      +--(nothing matched)-------------------------> no_match
-      v
-    compose                 LLM writes, constrained to policy + facts
-      v
-    verify                  every number checked against the facts dict;
-                            one retry, then a deterministic fallback
-      v
-    END
-
-Two real branches (failure and no-match) that skip the composer entirely.
-That is the point: an answer can only be produced on a path that has both
-live data and a matched policy.
-"""
 
 from __future__ import annotations
 
@@ -57,9 +30,6 @@ from app.weather import (
 )
 
 
-# --------------------------------------------------------------------------- #
-# State
-# --------------------------------------------------------------------------- #
 
 class AgentState(TypedDict, total=False):
     messages: Annotated[list[BaseMessage], add_messages]
@@ -77,9 +47,7 @@ class AgentState(TypedDict, total=False):
     verify_attempts: int
 
 
-# --------------------------------------------------------------------------- #
-# Structured outputs
-# --------------------------------------------------------------------------- #
+
 
 class Intent(BaseModel):
     activity: str = Field(description="closest activity from the allowed list")
@@ -103,9 +71,6 @@ def _history(messages: list[BaseMessage], limit: int = 6) -> str:
     return "\n".join(out)
 
 
-# --------------------------------------------------------------------------- #
-# Nodes
-# --------------------------------------------------------------------------- #
 
 def parse_intent(state: AgentState) -> dict:
     book = load_policy_book()
@@ -181,8 +146,7 @@ def match_policy(state: AgentState) -> dict:
         f"deterministic matches: {[m.sop.id for m in matches] or 'none'}"
     ]
 
-    # Fuzzy rules are only consulted when no hard hazard already fired. A
-    # picnic-comfort judgement should never outrank or dilute a live warning.
+    
     if not matches:
         for sop in candidate_fuzzy_sops(book, activity):
             try:
@@ -248,7 +212,6 @@ def compose(state: AgentState) -> dict:
     return {"answer": reply.content.strip()}
 
 
-# --- verification ---------------------------------------------------------- #
 
 _NUM = re.compile(r"\d+(?:\.\d+)?")
 
@@ -280,8 +243,7 @@ def verify(state: AgentState) -> dict:
     answer = state["answer"]
     allowed = _allowed_numbers(state)
 
-    # Strip clock times and dates before checking - "after 17:00" is phrasing,
-    # not a claimed measurement.
+    
     scrubbed = re.sub(r"\b\d{1,2}[:.]\d{2}\b", " ", answer)
     stated = set(_NUM.findall(scrubbed))
     ungrounded = {n for n in stated if n not in allowed}
@@ -297,8 +259,7 @@ def verify(state: AgentState) -> dict:
             "trace": trace + [f"verify: ungrounded {sorted(ungrounded)}, retrying"],
         }
 
-    # Second failure: stop trusting the model with prose and build the answer
-    # deterministically from the policy and the facts.
+    
     p = state["primary"]
     loc = state["facts"].get("_meta", {}).get("location", "your location")
     fallback = (
@@ -313,7 +274,7 @@ def verify(state: AgentState) -> dict:
     }
 
 
-# --- terminal branches ----------------------------------------------------- #
+
 
 def no_match(state: AgentState) -> dict:
     activity = state.get("activity", "unknown")
@@ -336,9 +297,7 @@ def honest_failure(state: AgentState) -> dict:
     }
 
 
-# --------------------------------------------------------------------------- #
-# Routers
-# --------------------------------------------------------------------------- #
+
 
 def after_resolve(state: AgentState) -> Literal["fetch_weather", "honest_failure"]:
     return "honest_failure" if state.get("error_kind") else "fetch_weather"
@@ -362,9 +321,7 @@ def finish(state: AgentState) -> dict:
     return {"messages": [AIMessage(content=state["answer"])]}
 
 
-# --------------------------------------------------------------------------- #
-# Build
-# --------------------------------------------------------------------------- #
+
 
 def build_graph():
     g = StateGraph(AgentState)
@@ -415,8 +372,6 @@ def ask(question: str, thread_id: str = "default") -> dict:
             k: v for k, v in (result.get("facts") or {}).items()
             if not k.startswith("_")
         },
-        # Returned separately so the eval harness can check answers against the
-        # same fact set the verify node used. Without this, visibility_m lives
-        # only under _meta and looks ungrounded to the suite.
+       
         "meta": (result.get("facts") or {}).get("_meta", {}),
     }

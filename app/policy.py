@@ -1,24 +1,4 @@
-"""
-Policy layer: loads sops.yaml and decides which rules fire.
 
-Three things to be able to defend:
-
-1. SOPs are DATA. This module holds no policy - it is an interpreter for a
-   small declarative condition language. Adding an 11th SOP is a YAML edit.
-
-2. Matching is HYBRID, on purpose:
-     - numeric conditions are evaluated in Python against the live facts.
-       Deterministic, auditable, cheap, cannot hallucinate.
-     - the user's activity is classified by an LLM into a CLOSED enum, so
-       "can I take my kid to the park" reaches child_outdoor_play without
-       keyword matching.
-     - rules marked `fuzzy: true` have no thresholds and are judged by an LLM
-       against their `when` text plus the facts.
-   Pure Python cannot answer "is today good for a picnic". Pure LLM cannot be
-   audited or held to a threshold. So: both, with a clear boundary.
-
-3. Conflict resolution is data too (policy_config.conflict_resolution).
-"""
 
 from __future__ import annotations
 

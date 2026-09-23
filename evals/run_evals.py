@@ -1,27 +1,4 @@
-"""
-Eval suite.
 
-Run:  python -m evals.run_evals                 (all offline cases)
-      python -m evals.run_evals --live          (also the live-weather case)
-      python -m evals.run_evals --only CLEAR-02 (one case, for debugging)
-
-Design notes worth defending:
-
-* Most cases INJECT facts rather than relying on today's weather. A suite whose
-  "severe conditions" case only passes during an actual rain event is not a
-  regression test, it is a coincidence. SEVERE-LIVE keeps a real end-to-end
-  path against the live API; SEVERE-INJECTED is its deterministic twin and is
-  the one that guards the behaviour on every run.
-
-* Injection happens at the weather boundary (resolve_location / fetch_forecast
-  / build_facts), not inside the policy layer. Every case still exercises the
-  real graph, the real matcher, the real composer and the real verifier - only
-  the API response is substituted.
-
-* `grounded` re-runs the same check the verify node performs, against the same
-  fact set. If the answer states a number the facts cannot account for, the
-  case fails.
-"""
 
 from __future__ import annotations
 
@@ -41,8 +18,7 @@ from app.weather import Location, WeatherError  # noqa: E402
 
 CASES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cases.yaml")
 
-# Baseline "nothing interesting happening" facts. Cases override only the
-# fields they care about, so a case reads as the one hazard it is testing.
+
 NEUTRAL = {
     "temperature_2m": 26.0,
     "apparent_temperature": 27.0,
@@ -128,7 +104,7 @@ def install_stubs(case: dict):
         agent_mod.build_facts = build
         return restore
 
-    # FAIL-GEOCODE and anything else runs the real path.
+    
     return restore
 
 
@@ -154,7 +130,7 @@ def check_grounded(answer: str, facts: dict, citations: list[str]) -> tuple[bool
         if sop:
             allowed.update(_NUM.findall(sop.guidance + " " + sop.when))
 
-    # Clock times are phrasing, not claimed measurements.
+    
     scrubbed = re.sub(r"\b\d{1,2}[:.]\d{2}\b", " ", answer)
     bad = [n for n in set(_NUM.findall(scrubbed)) if n not in allowed]
     return (not bad), ("ungrounded numbers: " + ", ".join(sorted(bad)) if bad else "")
@@ -213,9 +189,7 @@ def run_case(case: dict) -> dict:
             notes.append(f"expected error_kind={exp['error_kind']}, got {out.get('error_kind')}")
 
     if exp.get("grounded"):
-        # Check against the same fact set the verify node used. ask() strips
-        # keys starting with "_", so _meta (which holds visibility_m) has to be
-        # put back or legitimate numbers look ungrounded to the suite.
+        
         facts_for_check = {**out.get("facts", {}), "_meta": out.get("meta", {})}
         good, msg = check_grounded(answer, facts_for_check, cites)
         if not good:
