@@ -95,8 +95,8 @@ def parse_intent(state: AgentState) -> dict:
             "activity": "unknown",
             "city": state.get("last_location"),
             "trace": state.get("trace", []) + [
-                f"parse_intent failed: {type(exc).__name__}: {exc} "
-                f"| cause={type(cause).__name__}: {cause}"
+                f"parse_intent FAILED {type(exc).__name__}: {exc} || cause "
+                f"{type(cause).__name__}: {cause}"
             ],
         }
 
