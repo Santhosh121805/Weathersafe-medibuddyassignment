@@ -100,6 +100,12 @@ def parse_intent(state: AgentState) -> dict:
             ],
         }
 
+    return {
+        "activity": activity,
+        "city": city,
+        "trace": state.get("trace", []) + [f"intent: activity={activity} city={city}"],
+    }
+
 
 def resolve_location_node(state: AgentState) -> dict:
     city = state.get("city")
