@@ -151,12 +151,15 @@ Bad severity, category, activity or duplicate id fails at load. A rule using a
 fact the weather layer doesn't produce is rejected too, so it can't silently
 never match.
 
-## Results Screenshots
+## Screenshots
 
-![Eval run]<img width="1212" height="542" alt="Screenshot 2026-09-23 074628" src="https://github.com/user-attachments/assets/7d304131-aea2-49aa-8a63-bb9a649b0a32" />
+**Eval suite — 12/12 passing**
 
-![Answer from bot]<img width="826" height="822" alt="Screenshot 2026-09-23 094256" src="https://github.com/user-attachments/assets/7f35dc27-c446-46f7-a89d-dae543d36a0d" />
+<img width="900" alt="Eval run" src="https://github.com/user-attachments/assets/7d304131-aea2-49aa-8a63-bb9a649b0a32" />
 
+**A policy-backed answer with severity and citation**
+
+<img width="620" alt="Answer with citation" src="https://github.com/user-attachments/assets/7f35dc27-c446-46f7-a89d-dae543d36a0d" />
 
 ## Limitations
 
