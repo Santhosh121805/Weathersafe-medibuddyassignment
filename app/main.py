@@ -1,5 +1,4 @@
 
-
 from __future__ import annotations
 
 import os
@@ -16,7 +15,7 @@ from app.policy import load_policy_book
 ROOT = os.path.dirname(os.path.dirname(__file__))
 STATIC = os.path.join(ROOT, "static")
 
-app = FastAPI(title="Weather Advisory Support Bot")
+app = FastAPI(title="WeatherSafe")
 
 
 class ChatRequest(BaseModel):
@@ -72,15 +71,26 @@ def policies():
     }
 
 
+# TEMPORARY — remove before submitting.
+@app.get("/debug")
+def debug():
+    key = os.environ.get("GROQ_API_KEY") or ""
+    return {
+        "provider": os.environ.get("LLM_PROVIDER"),
+        "model": os.environ.get("LLM_MODEL"),
+        "key_present": bool(key),
+        "key_length": len(key),
+        "key_prefix": key[:4],
+    }
+
+
 @app.get("/")
 def home():
-    """Landing page."""
     return FileResponse(os.path.join(STATIC, "home.html"))
 
 
 @app.get("/app")
 def chat_ui():
-    """The chat interface."""
     return FileResponse(os.path.join(STATIC, "index.html"))
 
 
