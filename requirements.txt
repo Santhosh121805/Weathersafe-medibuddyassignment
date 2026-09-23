@@ -1,23 +1,23 @@
-# --- LangGraph agent runtime -------------------------------------------------
-langgraph
-langchain
-langchain-core
 
-# --- LLM providers -----------------------------------------------------------
-# Only the one matching LLM_PROVIDER in .env is imported at runtime
-# (see app/llm.py), but all four are listed so a reviewer can switch
-# providers without editing this file.
-langchain-groq
-langchain-google-genai
-langchain-openai
-langchain-anthropic
+langgraph==1.2.12
+langgraph-checkpoint==4.2.0
+langgraph-prebuilt==1.1.0
+langchain==1.4.2
+langchain-core==1.6.4
 
-# --- backend -----------------------------------------------------------------
-fastapi
-uvicorn[standard]
-pydantic
-python-dotenv
 
-# --- weather data + policy ---------------------------------------------------
-httpx          # Open-Meteo calls, with explicit timeouts
-pyyaml         # sops.yaml and evals/cases.yaml
+langchain-groq==1.1.3
+groq==0.37.1
+langchain-google-genai==4.4.0
+langchain-openai==1.6.2
+langchain-anthropic==1.7.2
+
+
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+pydantic==2.13.5
+python-dotenv==1.2.3
+
+
+httpx==0.28.1
+PyYAML==6.0.3
