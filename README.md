@@ -110,18 +110,39 @@ shouldn't have to edit Python.
 
 ## How it works
 
-```
-START → parse_intent → resolve_location ─(fail)─┐
-                            ↓                    │
-                       fetch_weather ─(fail)─────┤
-                            ↓                    ↓
-                       match_policy         honest_failure
-                       ↓          ↓              │
-                  compose      no_match          │
-                       ↓          │              │
-                    verify ───────┴──────────────┘
-                       ↓
-                     finish → END
+```mermaid
+flowchart TD
+    START([START]) --> P[parse_intent<br/><i>what did they ask about?</i>]
+    P --> R[resolve_location<br/><i>city → coordinates</i>]
+
+    R -->|ok| F[fetch_weather<br/><i>live data → facts</i>]
+    R -->|city not found| H[honest_failure<br/><i>I couldn't get the forecast</i>]
+
+    F -->|ok| M[match_policy<br/><i>which rule applies?</i>]
+    F -->|API down| H
+
+    M -->|rule matched| C[compose<br/><i>write the reply</i>]
+    M -->|nothing matched| N[no_match<br/><i>no guidance for that</i>]
+
+    C --> V{verify<br/>every number real?}
+    V -->|ungrounded, retry once| C
+    V -->|grounded| FIN[finish]
+
+    H --> FIN
+    N --> FIN
+    FIN --> E([END])
+
+    classDef main fill:#dae8fc,stroke:#6c8ebf,color:#000
+    classDef check fill:#e1d5e7,stroke:#9673a6,color:#000
+    classDef fail fill:#f8cecc,stroke:#b85450,color:#000
+    classDef none fill:#ffe6cc,stroke:#d79b00,color:#000
+    classDef ends fill:#d5e8d4,stroke:#82b366,color:#000
+
+    class P,R,F,M,C,FIN main
+    class V check
+    class H fail
+    class N none
+    class START,E ends
 ```
 
 Two branches skip the composer. An answer needs both live data and a matched rule.
