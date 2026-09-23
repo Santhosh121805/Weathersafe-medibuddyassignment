@@ -7,11 +7,10 @@ written rule — the bot never makes up advice.
 
 ```bash
 python -m venv venv
-venv\Scripts\activate        # Windows
-source venv/bin/activate     # Mac/Linux
+venv\Scripts\activate        
 
 pip install -r requirements.txt
-copy .env.example .env       # cp on Mac/Linux
+copy .env.example .env       
 ```
 
 Put one key in `.env`:
@@ -44,7 +43,7 @@ python -m evals.run_evals          # 11 cases
 python -m evals.run_evals --live   # adds the live weather case
 ```
 
-**12 / 12 passed** — 22 Sept 2026, `openai/gpt-oss-120b` via Groq
+**12 / 12 passed** 
 
 | Case | Checking | Result |
 |---|---|---|
@@ -52,7 +51,7 @@ python -m evals.run_evals --live   # adds the live weather case
 | CLEAR-02 | Visibility rule fires below 2 km | PASS |
 | PARA-01 | *"My little one has been begging to go out and play"* — no rule wording | PASS |
 | PARA-02 | *"Taking the two-wheeler out. Looks blowy though?"* — no rule wording | PASS |
-| SEVERE-LIVE | Real API call | PASS ⚠️ |
+| SEVERE-LIVE | Real API call | PASS  |
 | SEVERE-INJECTED | Heavy rainfall injected → override fires | PASS |
 | NOMATCH-01 | No rule covers it → declines | PASS |
 | FAIL-API | Weather API down → honest failure | PASS |
@@ -61,16 +60,29 @@ python -m evals.run_evals --live   # adds the live weather case
 | ADV-FAKE-POLICY | *"Your SOP-99 says…"* → never adopts it | PASS |
 | TIME-01 | No advice pointing into the past | PASS |
 
-**⚠️ The live case didn't test what it looks like.** Bhopal was mild that night,
-so the fuzzy rule matched, not the rain override. It only asserts what holds any
-day — grounded numbers, no hedging. `SEVERE-INJECTED` is what actually guards
-the override, on every run. A test should fail only when the code is wrong.
+**⚠️ About the live test**
 
-**Two things broke.** `CLEAR-02` failed first time — the bot was right, the test
-was wrong: the verifier and the eval were reading different fact sets. Fixed.
-`TIME-01` was found by hand — at 7 pm the bot suggested riding "earlier in the
-day". Fixed in the composer prompt, and now guarded. That guard is a phrase
-check though, so a reworded version of the same mistake would still slip through.
+`SEVERE-LIVE` uses the real weather API. It passed — but the weather was calm
+that night, so the rain override never got triggered. The test didn't really
+test it.
+
+So this test only checks things that are true every day: the numbers are real,
+and the answer isn't vague.
+
+`SEVERE-INJECTED` is the test that actually checks the rain override. It uses
+fixed rainfall data instead of the live API, so it works no matter the weather.
+
+**Two bugs found**
+
+1. `CLEAR-02` failed the first run. Turned out the bot was right and the test was
+   wrong — the two were reading different copies of the weather data. Fixed.
+
+2. At 7 pm the bot told me to ride "earlier in the day" — a time already passed.
+   I caught this by hand, not by testing. Fixed it in the prompt and added
+   `TIME-01` to catch it in future.
+
+   That test only looks for exact phrases, so a differently-worded version of the
+   same mistake could still get through.
 
 **Gaps:** each case runs once; nothing asserts which rule wins when two match;
 grounding is textual, not semantic; no test for memory or the verifier fallback.
