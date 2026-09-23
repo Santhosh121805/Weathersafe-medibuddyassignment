@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>WeatherSafe</title>
+<style>
+  :root {
+    --bg:        #f4f5f7;
+    --surface:   #ffffff;
+    --surface-2: #f0f2f5;
+    --line:      #e2e5ea;
+    --ink:       #16181d;
+    --ink-2:     #5d6470;
+    --ink-3:     #8b919c;
+    --accent:    #1f2937;
+    --user-bg:   #1f2937;
+    --user-ink:  #ffffff;
+
+    --sev-critical: #b42318;
+    --sev-high:     #c4460a;
+    --sev-moderate: #9a6700;
+    --sev-low:      #175cd3;
+    --sev-info:     #5d6470;
+
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0e1014;
+      --surface:   #171a20;
+      --surface-2: #1e222a;
+      --line:      #282d37;
+      --ink:       #e8eaee;
+      --ink-2:     #a0a7b4;
+      --ink-3:     #6e7684;
+      --accent:    #e8eaee;
+      --user-bg:   #2f3742;
+      --user-ink:  #ffffff;
+
+      --sev-critical: #ff7b6b;
+      --sev-high:     #ff9f57;
+      --sev-moderate: #e8c15c;
+      --sev-low:      #7cb0ff;
+      --sev-info:     #a0a7b4;
+
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px rgba(0,0,0,.2);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#0e1014; --surface:#171a20; --surface-2:#1e222a; --line:#282d37;
+    --ink:#e8eaee; --ink-2:#a0a7b4; --ink-3:#6e7684; --accent:#e8eaee;
+    --user-bg:#2f3742; --user-ink:#fff;
+    --sev-critical:#ff7b6b; --sev-high:#ff9f57; --sev-moderate:#e8c15c;
+    --sev-low:#7cb0ff; --sev-info:#a0a7b4;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 780px;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+
+  /* ---------- header ---------- */
+  header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .mark {
+    width: 34px; height: 34px; flex: 0 0 auto;
+    border-radius: 10px;
+    background: var(--accent);
+    color: var(--surface);
+    display: grid; place-items: center;
+  }
+  .mark svg { width: 19px; height: 19px; }
+  .titles { flex: 1 1 auto; min-width: 0; }
+  .titles h1 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .titles p  { margin: 1px 0 0; font-size: 12.5px; color: var(--ink-2); }
+  .hbtn {
+    flex: 0 0 auto;
+    width: 34px; height: 34px;
+    border: 1px solid var(--line); border-radius: 9px;
+    background: var(--surface); color: var(--ink-2);
+    cursor: pointer; display: grid; place-items: center;
+    transition: background .15s, color .15s;
+  }
+  .hbtn:hover { background: var(--surface-2); color: var(--ink); }
+  .hbtn svg { width: 16px; height: 16px; }
+
+  /* ---------- messages ---------- */
+  #log {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 20px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+
+  .row { display: flex; gap: 10px; max-width: 100%; }
+  .row.user { justify-content: flex-end; }
+
+  .avatar {
+    width: 28px; height: 28px; flex: 0 0 auto;
+    border-radius: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    display: grid; place-items: center;
+    color: var(--ink-2);
+    margin-top: 2px;
+  }
+  .avatar svg { width: 15px; height: 15px; }
+
+  .bubble {
+    max-width: 82%;
+    padding: 11px 14px;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .row.user .bubble {
+    background: var(--user-bg);
+    color: var(--user-ink);
+    border-color: transparent;
+    border-bottom-right-radius: 5px;
+  }
+  .row.bot .bubble { border-bottom-left-radius: 5px; }
+
+  /* ---------- policy footer ---------- */
+  .policy {
+    margin-top: 11px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    font-size: 11.5px;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-size: 10px;
+  }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .sev-critical { color: var(--sev-critical); }
+  .sev-high     { color: var(--sev-high); }
+  .sev-moderate { color: var(--sev-moderate); }
+  .sev-low      { color: var(--sev-low); }
+  .sev-info     { color: var(--sev-info); }
+
+  .cites { color: var(--ink-3); }
+  .cites code {
+    font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--ink-2);
+    background: var(--surface-2);
+    padding: 2px 5px;
+    border-radius: 4px;
+  }
+  .nocite {
+    margin-top: 10px; padding-top: 9px;
+    border-top: 1px dashed var(--line);
+    font-size: 11.5px; color: var(--ink-3);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* ---------- typing ---------- */
+  .typing { display: flex; gap: 4px; padding: 4px 2px; }
+  .typing i {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ink-3);
+    animation: blink 1.3s infinite ease-in-out;
+  }
+  .typing i:nth-child(2) { animation-delay: .18s; }
+  .typing i:nth-child(3) { animation-delay: .36s; }
+  @keyframes blink { 0%,60%,100% { opacity:.25; transform:translateY(0) }
+                     30% { opacity:1; transform:translateY(-3px) } }
+
+  /* ---------- empty state ---------- */
+  .empty { margin: auto 0; text-align: center; padding: 24px 8px; }
+  .empty .mark { width: 44px; height: 44px; margin: 0 auto 14px; border-radius: 13px; }
+  .empty .mark svg { width: 24px; height: 24px; }
+  .empty h2 { margin: 0 0 6px; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  .empty p  { margin: 0 auto 20px; font-size: 13.5px; color: var(--ink-2); max-width: 44ch; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .chip {
+    padding: 8px 13px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--surface); color: var(--ink-2);
+    font: inherit; font-size: 13px; cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .chip:hover { background: var(--surface-2); color: var(--ink); border-color: var(--ink-3); }
+
+  /* ---------- composer ---------- */
+  .composer {
+    flex: 0 0 auto;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: var(--bg);
+  }
+  form {
+    display: flex; align-items: flex-end; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 7px 7px 7px 14px;
+    box-shadow: var(--shadow);
+    transition: border-color .15s;
+  }
+  form:focus-within { border-color: var(--ink-3); }
+  textarea {
+    flex: 1 1 auto;
+    border: 0; outline: 0; resize: none;
+    background: transparent; color: var(--ink);
+    font: inherit; line-height: 1.5;
+    max-height: 140px; padding: 6px 0;
+  }
+  textarea::placeholder { color: var(--ink-3); }
+  .send {
+    flex: 0 0 auto;
+    width: 34px; height: 34px;
+    border: 0; border-radius: 9px;
+    background: var(--accent); color: var(--surface);
+    cursor: pointer; display: grid; place-items: center;
+    transition: opacity .15s;
+  }
+  .send:disabled { opacity: .35; cursor: default; }
+  .send svg { width: 16px; height: 16px; }
+  .hint {
+    margin: 8px 2px 0;
+    font-size: 11.5px; color: var(--ink-3); text-align: center;
+  }
+
+  @media (max-width: 560px) {
+    .bubble { max-width: 88%; }
+    #log { padding: 16px 12px 4px; }
+    .composer { padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6-1.8A4 4 0 0 0 6.5 19z"/>
+      </svg>
+    </div>
+    <div class="titles">
+      <h1>WeatherSafe</h1>
+      <p>Every answer traced to a written policy</p>
+    </div>
+    <button class="hbtn" id="theme" title="Toggle theme" aria-label="Toggle theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+      </svg>
+    </button>
+    <button class="hbtn" id="reset" title="New conversation" aria-label="New conversation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/>
+      </svg>
+    </button>
+  </header>
+
+  <div id="log">
+    <div class="empty" id="empty">
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6-1.8A4 4 0 0 0 6.5 19z"/>
+        </svg>
+      </div>
+      <h2>Is it safe to go outside?</h2>
+      <p>Ask about any outdoor activity and I'll check live conditions against
+         our written safety policies. If no policy covers it, I'll say so
+         rather than guess.</p>
+      <div class="chips">
+        <button class="chip">Is it safe to bike to work in Bhopal today?</button>
+        <button class="chip">Can I take my daughter to the park in Chennai?</button>
+        <button class="chip">Is today good for a picnic in Bengaluru?</button>
+        <button class="chip">Should my father go for his morning walk in Delhi?</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="composer">
+    <form id="f">
+      <textarea id="q" rows="1" placeholder="Ask about an outdoor activity…"
+                autocomplete="off"></textarea>
+      <button class="send" id="send" type="submit" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>
+        </svg>
+      </button>
+    </form>
+    <p class="hint">Advisory only — follow local authority and IMD warnings.</p>
+  </div>
+
+</div>
+
+<script>
+const log     = document.getElementById('log');
+const empty   = document.getElementById('empty');
+const form    = document.getElementById('f');
+const input   = document.getElementById('q');
+const sendBtn = document.getElementById('send');
+
+let threadId = null;
+
+const ICON_BOT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6-1.8A4 4 0 0 0 6.5 19z"/></svg>';
+const ICON_YOU = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+
+/* ---------- theme ---------- */
+const saved = (() => { try { return localStorage.getItem('theme'); } catch (e) { return null; } })();
+if (saved) document.documentElement.setAttribute('data-theme', saved);
+
+document.getElementById('theme').onclick = () => {
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const cur  = document.documentElement.getAttribute('data-theme') || (dark ? 'dark' : 'light');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('theme', next); } catch (e) {}
+};
+
+document.getElementById('reset').onclick = () => {
+  threadId = null;
+  log.querySelectorAll('.row').forEach(n => n.remove());
+  empty.style.display = '';
+  input.focus();
+};
+
+/* ---------- composer ---------- */
+function autogrow() {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+}
+input.addEventListener('input', autogrow);
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+});
+
+document.querySelectorAll('.chip').forEach(c => {
+  c.onclick = () => { input.value = c.textContent; autogrow(); form.requestSubmit(); };
+});
+
+/* ---------- rendering ---------- */
+function scrollDown() { log.scrollTop = log.scrollHeight; }
+
+function addRow(who) {
+  empty.style.display = 'none';
+  const row = document.createElement('div');
+  row.className = 'row ' + who;
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.innerHTML = who === 'bot' ? ICON_BOT : ICON_YOU;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  if (who === 'bot') { row.append(av, bubble); } else { row.append(bubble, av); }
+  log.appendChild(row);
+  scrollDown();
+  return { row, bubble };
+}
+
+function addUser(text) {
+  const { bubble } = addRow('user');
+  bubble.textContent = text;
+}
+
+function addTyping() {
+  const { row, bubble } = addRow('bot');
+  bubble.innerHTML = '<div class="typing"><i></i><i></i><i></i></div>';
+  return row;
+}
+
+function renderBot(data) {
+  const { bubble } = addRow('bot');
+
+  const body = document.createElement('div');
+  body.textContent = data.reply;
+  bubble.appendChild(body);
+
+  if (data.citations && data.citations.length) {
+    const foot = document.createElement('div');
+    foot.className = 'policy';
+
+    if (data.severity) {
+      const pill = document.createElement('span');
+      pill.className = 'pill sev-' + data.severity;
+      pill.innerHTML = '<span class="dot"></span>' + data.severity;
+      foot.appendChild(pill);
+    }
+
+    const cites = document.createElement('span');
+    cites.className = 'cites';
+    data.citations.forEach((c, i) => {
+      const id = c.split(' - ')[0];
+      const title = c.slice(id.length + 3);
+      const code = document.createElement('code');
+      code.textContent = id;
+      code.title = title;
+      if (i) cites.append(' · ');
+      cites.appendChild(code);
+    });
+    foot.appendChild(cites);
+    bubble.appendChild(foot);
+  } else {
+    const note = document.createElement('div');
+    note.className = 'nocite';
+    note.textContent = 'No policy matched — no advice given';
+    bubble.appendChild(note);
+  }
+  scrollDown();
+}
+
+/* ---------- submit ---------- */
+form.onsubmit = async (e) => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+
+  addUser(text);
+  input.value = '';
+  autogrow();
+  sendBtn.disabled = true;
+
+  const typing = addTyping();
+
+  try {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, thread_id: threadId })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    threadId = data.thread_id;
+    typing.remove();
+    renderBot(data);
+  } catch (err) {
+    typing.remove();
+    renderBot({ reply: 'Could not reach the server: ' + err.message, citations: [] });
+  } finally {
+    sendBtn.disabled = false;
+    input.focus();
+  }
+};
+
+input.focus();
+</script>
+</body>
+</html>

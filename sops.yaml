@@ -1,0 +1,395 @@
+# =============================================================================
+# Standard Operating Procedures — Weather Advisory Support Bot
+# =============================================================================
+# This file is the entire policy surface of the system. To add, change or
+# remove a policy you edit ONLY this file. No Python is touched. The loader
+# re-reads the file when its timestamp changes, so a running server picks up
+# a new rule on the next question.
+#
+# Fields:
+#   id          stable handle, cited back to the user
+#   category    grouping (see policy_config.categories)
+#   severity    info | low | moderate | high | critical
+#   priority    ranked above severity; overrides use 100
+#   title       human label
+#   when        plain-English trigger. Shown in citations, and used as the
+#               matching criterion for fuzzy rules.
+#   conditions  machine-checkable block, evaluated in Python against the
+#               facts pulled from the API. Top-level keys are ANDed.
+#   applies_to  activity whitelist. Empty = applies to every activity.
+#   fuzzy       true = no numeric threshold; an LLM judges applicability.
+#   guidance    the advice. The composer may only convey this.
+#   source      where the threshold comes from, so "why this number?" has
+#               an answer that isn't "it felt right".
+#
+# Operators: gte, gt, lte, lt, eq, ne, between [lo,hi], in [..], is_true
+# Nesting:   any_of [..], all_of [..]
+# =============================================================================
+
+policy_config:
+
+  # Conflict resolution, declared as data rather than buried in code.
+  # Several rules will genuinely apply to one question (high UV and strong
+  # wind on the same cycling question). The chosen strategy:
+  #   1. rank by priority, then by severity
+  #   2. the top rule becomes PRIMARY and drives the advice
+  #   3. any other rule at >= moderate is surfaced as an additional warning,
+  #      cited separately, capped at 2
+  # Rationale: one question deserves one clear recommendation, but silently
+  # dropping a second serious hazard would be unsafe. Trivial extras are
+  # dropped so they don't bury the main point.
+  conflict_resolution:
+    strategy: rank_by_priority_then_severity
+    surface_secondary: true
+    secondary_surface_threshold: moderate
+    max_secondary: 2
+
+  severity_rank:
+    info: 0
+    low: 1
+    moderate: 2
+    high: 3
+    critical: 4
+
+  categories:
+    - outdoor_exercise
+    - travel_commute
+    - vulnerable_groups
+    - leisure_general
+    - situational_override
+
+  # Closed enum the intent parser must choose from. Adding an activity here
+  # makes it available to applies_to — still no code change.
+  activities:
+    - running
+    - cycling
+    - hiking
+    - outdoor_sports
+    - walking
+    - commute_general
+    - commute_two_wheeler
+    - child_outdoor_play
+    - elderly_outdoor
+    - pet_walking
+    - picnic
+    - general_outdoor
+    - unknown
+
+  # IMD rainfall categories, mm per 24h. Kept as data so the threshold is
+  # policy, not a magic number in Python.
+  rainfall_thresholds_mm_24h:
+    heavy: 64.5
+    very_heavy: 115.6
+    extremely_heavy: 204.5
+
+  # Every fact a condition may reference. Produced by weather.py::build_facts,
+  # all traceable to the API response for this request. The loader rejects a
+  # rule that references anything not on this list.
+  known_facts:
+    - temperature_2m             # °C, current=
+    - apparent_temperature       # °C, current=
+    - relative_humidity_2m       # %, current=
+    - wind_speed_10m             # km/h, current=
+    - wind_gusts_10m             # km/h, current=
+    - precipitation              # mm this hour, current=
+    - precipitation_probability  # %, hourly= at current hour
+    - uv_index                   # hourly= at current hour
+    - is_day                     # 1/0, current=
+    - weather_code               # WMO code, current=
+    - is_thunderstorm            # derived: weather_code in 95,96,99
+    - visibility_poor            # derived: visibility < 2000 m
+    - hour_local                 # derived: local hour 0-23
+    - precip_next_24h_mm         # derived: sum of hourly precipitation, 24h
+    - max_gust_next_24h          # derived: max hourly gusts, 24h
+
+# =============================================================================
+sops:
+
+  # --- 1. OUTDOOR EXERCISE --------------------------------------------------
+
+  - id: SOP-EX-01
+    category: outdoor_exercise
+    severity: critical
+    priority: 10
+    title: Extreme heat during strenuous exercise
+    when: >-
+      The feels-like (apparent) temperature is 40 °C or above and the user is
+      asking about strenuous outdoor activity such as running, cycling, hiking
+      or sport.
+    conditions:
+      apparent_temperature: { gte: 40 }
+    applies_to: [running, cycling, hiking, outdoor_sports]
+    guidance: >-
+      Recommend postponing the activity. Heat illness risk is elevated at this
+      feels-like temperature. If it cannot be postponed, advise moving it to the
+      coolest part of the day, reducing both intensity and duration, staying in
+      shade where possible, and drinking water every 15-20 minutes.
+    source: >-
+      WHO advises avoiding strenuous activity during the hottest part of the day
+      and moving unavoidable activity to cooler hours. Apparent temperature is
+      used rather than air temperature because heat stress depends on humidity.
+
+  - id: SOP-EX-02
+    category: outdoor_exercise
+    severity: moderate
+    priority: 10
+    title: Very high to extreme UV during daylight exercise
+    when: >-
+      The UV index is 8 or higher, it is daytime, and the user is asking about
+      outdoor exercise or sport.
+    conditions:
+      uv_index: { gte: 8 }
+      is_day: { eq: 1 }
+    applies_to: [running, cycling, hiking, outdoor_sports, walking, general_outdoor]
+    guidance: >-
+      Advise avoiding the strongest midday exposure where practical, ideally
+      shifting the activity to before 10:00 or after 16:00. If it goes ahead,
+      recommend shade, protective clothing, sunglasses and broad-spectrum
+      sunscreen, and shortening the period of continuous exposure.
+    source: >-
+      The WHO/EPA global UV index scale classifies 8-10 as "very high" and 11+
+      as "extreme", both requiring extra protection.
+
+  - id: SOP-EX-03
+    category: outdoor_exercise
+    severity: moderate
+    priority: 10
+    title: Strong wind affecting balance-dependent activity
+    when: >-
+      Sustained wind is 30 km/h or more, or gusts are 45 km/h or more, and the
+      user is asking about cycling, riding a two-wheeler, running, hiking or
+      outdoor sport.
+    conditions:
+      any_of:
+        - wind_speed_10m: { gte: 30 }
+        - wind_gusts_10m: { gte: 45 }
+    applies_to: [cycling, commute_two_wheeler, running, hiking, outdoor_sports]
+    guidance: >-
+      Treat this as a control and safety issue rather than a comfort one.
+      Crosswinds and gusts at this strength can destabilise a rider, especially
+      on bridges, flyovers and open stretches. Recommend a sheltered route, a
+      different mode of transport, or postponing. If riding, advise reduced
+      speed and both hands on the bars.
+    source: >-
+      Activity threshold, not a claim that 30 km/h is universally hazardous.
+      Risk here depends on the activity and exposure, not on wind alone.
+
+  # --- 2. TRAVEL & COMMUTE --------------------------------------------------
+
+  - id: SOP-TR-01
+    category: travel_commute
+    severity: high
+    priority: 10
+    title: Heavy rainfall during travel
+    when: >-
+      Rainfall is 5 mm per hour or more and the user is asking about walking,
+      cycling, riding a two-wheeler or driving.
+    conditions:
+      precipitation: { gte: 5 }
+    applies_to: [walking, cycling, commute_two_wheeler, commute_general]
+    guidance: >-
+      Recommend delaying non-essential travel. If travel is necessary, advise
+      reduced speed, greater following distance, and caution on water-covered
+      sections where depth cannot be judged. Note that short bursts of intense
+      rain can cause localised flooding where drainage is poor.
+    source: >-
+      Rainfall intensity rather than probability, because probability describes
+      likelihood while intensity describes the hazard actually present.
+
+  - id: SOP-TR-02
+    category: travel_commute
+    severity: moderate
+    priority: 10
+    title: High probability of rain during a commute
+    when: >-
+      The probability of precipitation is 70 percent or higher and the user is
+      asking about travelling or commuting.
+    conditions:
+      precipitation_probability: { gte: 70 }
+    applies_to: [commute_general, commute_two_wheeler, cycling, walking]
+    guidance: >-
+      Tell the user rain is likely rather than certain. Recommend rain
+      protection, extra journey time, and checking for local alerts before
+      leaving. For a two-wheeler, suggest considering another mode.
+    source: >-
+      Deliberately kept at moderate: 70 percent probability does not mean
+      hazardous conditions are guaranteed, only that rain is likely.
+
+  - id: SOP-TR-03
+    category: travel_commute
+    severity: high
+    priority: 10
+    title: Poor visibility during travel
+    when: >-
+      Visibility is below 2 km and the user is asking about driving, cycling,
+      riding a two-wheeler or otherwise travelling.
+    conditions:
+      visibility_poor: { is_true: true }
+    applies_to: [commute_general, commute_two_wheeler, cycling, walking, general_outdoor]
+    guidance: >-
+      Recommend postponing non-essential travel. If travel is necessary, advise
+      low-beam headlights, reduced speed, increased following distance and no
+      overtaking. Note that two-wheeler riders are the least visible road users
+      in these conditions.
+    source: >-
+      2 km is a widely used threshold for visibility-restricted driving
+      conditions, applicable to fog, heavy rain and dust alike.
+
+  # --- 3. VULNERABLE GROUPS -------------------------------------------------
+
+  - id: SOP-VG-01
+    category: vulnerable_groups
+    severity: high
+    priority: 20
+    title: Children outdoors in heat
+    when: >-
+      The user is asking about outdoor activity for a child and the feels-like
+      temperature is 35 °C or above.
+    conditions:
+      apparent_temperature: { gte: 35 }
+    applies_to: [child_outdoor_play]
+    guidance: >-
+      Recommend moving the activity to a cooler time of day, before 10:00 or
+      after 17:00. Advise shade, frequent rest, regular water, and avoiding
+      prolonged direct sunlight. Note that children heat up faster than adults
+      and show signs of dehydration later, so waiting for visible discomfort is
+      not a reliable guide.
+    source: >-
+      CDC and WHO both identify children as being at increased risk of
+      heat-related illness. Threshold set below the adult exercise threshold
+      for that reason.
+
+  - id: SOP-VG-02
+    category: vulnerable_groups
+    severity: high
+    priority: 20
+    title: Older adults outdoors in heat and humidity
+    when: >-
+      The user is asking about outdoor activity for an elderly person and the
+      temperature is 32 °C or above with relative humidity of 70 percent or
+      higher.
+    conditions:
+      temperature_2m: { gte: 32 }
+      relative_humidity_2m: { gte: 70 }
+    applies_to: [elderly_outdoor, walking]
+    guidance: >-
+      Advise avoiding prolonged outdoor exposure during the hottest part of the
+      day and preferring early morning. Recommend keeping the outing short,
+      shaded and close to home, with water carried and regular rest. Note that
+      heat stress in older adults can present as confusion or unusual fatigue
+      rather than obvious discomfort, and that this warrants stopping and moving
+      indoors immediately.
+    source: >-
+      CDC notes adults aged 65+ are more prone to heat-related illness and less
+      able to adapt to sudden temperature changes. Humidity is included because
+      it impairs the body's ability to cool by sweating.
+
+    # --- 4. LEISURE (FUZZY) ---------------------------------------------------
+
+  - id: SOP-LG-01
+    category: leisure_general
+    severity: info
+    priority: 5
+    fuzzy: true
+    title: General suitability for ordinary outdoor activity
+    when: >-
+      The user is asking whether conditions are pleasant or workable for an
+      ordinary outdoor activity - a picnic, a park visit, sitting outside, a
+      casual walk, a ride, a run or a routine commute - and no specific hazard
+      threshold has been crossed. There is no single number to check here.
+      Judge overall suitability from the combination of temperature, feels-like
+      temperature, humidity, rain probability, rainfall, wind, UV and whether it
+      is daylight, taking the stated activity into account. Do not reduce this
+      to any one number. This applies whenever such a question is asked and no
+      higher-severity rule has already fired.
+    applies_to: [picnic, general_outdoor, walking, child_outdoor_play,
+                 cycling, running, commute_general, commute_two_wheeler]
+    guidance: >-
+      Give a balanced read of conditions rather than a safety verdict. Classify
+      them as pleasant, suitable, suitable with precautions, or better to
+      postpone, and name the dominant reason for that call. State which specific
+      conditions are favourable and which are not, and identify the better
+      window of the day if one is clearly preferable. Leave the decision with
+      the user, and do not present this as a safety clearance.
+    source: >-
+      Deliberately has no numeric trigger. Outdoor comfort is a multi-variable
+      judgement, and inventing a threshold such as "20-28 °C is a good picnic"
+      would be a fabricated rule dressed up as policy.
+
+  # --- 5. SITUATIONAL OVERRIDES ---------------------------------------------
+  # These are not about any one activity. They describe conditions where the
+  # weather itself is the hazard, so they apply to every activity (empty
+  # applies_to) and outrank activity rules via priority 100.
+
+  - id: SOP-SIT-01
+    category: situational_override
+    severity: critical
+    priority: 100
+    title: Thunderstorm or lightning activity
+    when: >-
+      The reported weather code indicates thunderstorm conditions at the user's
+      location, and the user is asking about any outdoor activity.
+    conditions:
+      is_thunderstorm: { is_true: true }
+    applies_to: []
+    guidance: >-
+      Lead with the thunderstorm before any activity-specific advice. Recommend
+      moving indoors to a substantial building or a hard-topped vehicle, and not
+      continuing outdoor sport, cycling, hiking, walking or leisure. Advise that
+      outdoor activity should not resume until at least 30 minutes after the
+      last thunder is heard. This overrides all activity-specific guidance.
+    source: >-
+      US National Weather Service 30-minute rule. Treated as its own hazard
+      rather than as a form of heavy rain, because the lightning risk is
+      independent of rainfall intensity.
+
+  - id: SOP-SIT-02
+    category: situational_override
+    severity: critical
+    priority: 100
+    title: Severe wind or squall event
+    when: >-
+      Sustained wind is 60 km/h or more, or gusts reach 75 km/h or more, at the
+      user's location, indicating a squall or storm-force wind event rather
+      than a breezy day.
+    conditions:
+      any_of:
+        - wind_speed_10m: { gte: 60 }
+        - max_gust_next_24h: { gte: 75 }
+    applies_to: []
+    guidance: >-
+      Lead with the wind event before any activity-specific advice. Recommend
+      avoiding non-essential outdoor activity and postponing cycling, hiking,
+      sport and leisure. Warn about falling branches, loose hoardings and
+      unstable temporary structures, and note that two-wheelers and high-sided
+      vehicles are especially affected. Do not treat the activity as safe merely
+      because rainfall is low. This overrides all activity-specific guidance.
+    source: >-
+      WMO classifies tropical-storm-force sustained wind from roughly 63 km/h.
+      Thresholds are expressed in wind terms rather than as a named storm
+      category, because cyclone naming differs by ocean basin.
+
+  - id: SOP-SIT-03
+    category: situational_override
+    severity: critical
+    priority: 100
+    title: Active heavy-rainfall system over the location
+    when: >-
+      Rainfall accumulating over the next 24 hours reaches 64.5 mm or more,
+      which is the IMD heavy-rainfall threshold, indicating a sustained rain
+      system rather than passing showers.
+    conditions:
+      precip_next_24h_mm: { gte: 64.5 }
+    applies_to: []
+    guidance: >-
+      Lead with the rain system itself and the expected accumulation before any
+      activity-specific advice, and treat every outdoor-activity question as
+      high severity regardless of its category. Advise against non-essential
+      outdoor plans, warn about waterlogging and localised flooding, and
+      recommend following local authority and IMD advisories. This overrides
+      all activity-specific guidance.
+    source: >-
+      India Meteorological Department rainfall categories: heavy 64.5 mm/24h,
+      very heavy 115.6 mm, extremely heavy 204.5 mm. Keyed on accumulation
+      rather than probability, because probability describes likelihood while
+      accumulation describes the system actually present.
