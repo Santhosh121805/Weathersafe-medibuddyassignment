@@ -112,26 +112,17 @@ shouldn't have to edit Python.
 
 ```mermaid
 flowchart TD
-    A([Someone asks a question]) --> B[Understand what they're asking]
-    B --> C[Find the place on the map]
-    C -->|found| D[Get today's weather]
-    C -->|can't find the place| H[Say we couldn't check<br/>rather than guess]
-    D -->|got it| E[Look for a rule that applies]
-    D -->|weather service down| H
-    E -->|rule found| F[Write the advice<br/>from that rule]
-    E -->|no rule covers this| N[Say we have no<br/>guidance for that]
-    F --> G{Check every number<br/>came from the forecast}
-    G -->|something looks made up| F
-    G -->|all real| Z([Answer shown])
-    H --> Z
-    N --> Z
+    Q([Question]) --> W[Get live weather]
+    W --> R[Find a matching rule]
+    R --> A[Write the advice]
+    A --> C{Numbers real?}
+    C --> D([Answer])
 
-    classDef fail fill:#ffd6d6,stroke:#c0392b,stroke-width:2px,color:#000
-    classDef none fill:#ffe9c7,stroke:#c77f00,stroke-width:2px,color:#000
-    classDef check fill:#e0d4f0,stroke:#7d5ba6,stroke-width:2px,color:#000
-    class H fail
-    class N none
-    class G check
+    W -->|no weather| F1[Say we couldn't check]
+    R -->|no rule| F2[Say we have no guidance]
+
+    classDef out fill:#ffe0e0,stroke:#b03030,color:#000
+    class F1,F2 out
 ```
 Two branches skip the composer. An answer needs both live data and a matched rule.
 
