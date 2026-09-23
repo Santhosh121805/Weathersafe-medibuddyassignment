@@ -151,7 +151,7 @@ Bad severity, category, activity or duplicate id fails at load. A rule using a
 fact the weather layer doesn't produce is rejected too, so it can't silently
 never match.
 
-## Screenshots
+## Results Screenshots
 
 **Eval suite — 12/12 passing**
 
