@@ -79,10 +79,10 @@ def debug():
         "provider": os.environ.get("LLM_PROVIDER"),
         "model": os.environ.get("LLM_MODEL"),
         "key_present": bool(key),
-        "key_length": len(key),
+        "raw_length": len(key),
+        "stripped_length": len(key.strip()),
         "key_prefix": key[:4],
     }
-
 
 @app.get("/")
 def home():
