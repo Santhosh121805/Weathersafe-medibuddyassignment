@@ -88,17 +88,17 @@ def parse_intent(state: AgentState) -> dict:
         activity = intent.activity if intent.activity in book.activities else "unknown"
         city = intent.location or state.get("last_location")
     except Exception as exc:  # a classifier failure must not fake an answer
+        import traceback
+        traceback.print_exc()
+        cause = getattr(exc, "__cause__", None)
         return {
             "activity": "unknown",
             "city": state.get("last_location"),
-            "trace": state.get("trace", []) + [f"parse_intent failed: {exc}"],
+            "trace": state.get("trace", []) + [
+                f"parse_intent failed: {type(exc).__name__}: {exc} "
+                f"| cause={type(cause).__name__}: {cause}"
+            ],
         }
-
-    return {
-        "activity": activity,
-        "city": city,
-        "trace": state.get("trace", []) + [f"intent: activity={activity} city={city}"],
-    }
 
 
 def resolve_location_node(state: AgentState) -> dict:
