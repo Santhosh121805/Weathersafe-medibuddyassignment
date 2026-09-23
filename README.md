@@ -3,6 +3,8 @@
 Answers outdoor safety questions using live weather. Every answer comes from a
 written rule — the bot never makes up advice.
 
+Hosted URL - https://weathersafe.onrender.com/
+
 ## Setup
 
 ```bash
@@ -149,12 +151,12 @@ Bad severity, category, activity or duplicate id fails at load. A rule using a
 fact the weather layer doesn't produce is rejected too, so it can't silently
 never match.
 
-## Screenshots
+## Results Screenshots
 
-![Eval run](docs/eval-run.png)
-![Answer with citation](docs/answer-with-citation.png)
-![Honest failure](docs/honest-failure.png)
-![Live SOP add](docs/live-sop-add.png)
+![Eval run]<img width="1212" height="542" alt="Screenshot 2026-09-23 074628" src="https://github.com/user-attachments/assets/7d304131-aea2-49aa-8a63-bb9a649b0a32" />
+
+![Answer from bot]<img width="826" height="822" alt="Screenshot 2026-09-23 094256" src="https://github.com/user-attachments/assets/7f35dc27-c446-46f7-a89d-dae543d36a0d" />
+
 
 ## Limitations
 
